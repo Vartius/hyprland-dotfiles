@@ -1,0 +1,27 @@
+import = ["~/.config/alacritty/dracula.toml"]
+
+[font]
+size = 14
+
+[font.bold]
+#family = "MesloLGS NF"
+family = "JetBrainsMono NF"
+style = "Bold"
+
+[font.italic]
+# family = "MesloLGS NF"
+family = "JetBrainsMono NF"
+style = "Italic"
+
+[font.normal]
+# family = "MesloLGS NF"
+family = "JetBrainsMono NF"
+style = "Regular"
+
+[font.offset]
+x = 0
+y = 0
+
+[window]
+opacity = 0.8
+
