@@ -1,0 +1,12 @@
+font:
+  normal:
+    family: "MesloLGSDZ Nerd Font"
+    style: Regular
+  bold:
+    family: "MesloLGSDZ Nerd Font"
+    style: Bold
+  italic:
+    family: "MesloLGSDZ Nerd Font"
+    style: Italic
+  size: 14
+
