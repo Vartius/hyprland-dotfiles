@@ -11,3 +11,7 @@ vim.opt.expandtab = true -- tabs are spaces, mainly because of python
 vim.opt.autoindent = true
 
 vim.opt.wrap = true
+vim.g.lazyvim_python_lsp = "pyright"
+vim.g.lazyvim_python_ruff = "ruff"
+vim.o.winblend = 0
+vim.o.pumblend = 0
