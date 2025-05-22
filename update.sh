@@ -4,27 +4,11 @@
 set -e
 
 # --- Configuration ---
-# Path to your dotfiles repository
 DOTFILES_REPO_DIR="$HOME/Downloads/dotfiles"
-
-# Source directories in $HOME/.config to copy
-# These will be copied to $DOTFILES_REPO_DIR/.config/
 CONFIG_DIRS_TO_COPY=(
-    "alacritty"
-    "gtk-2.0"
-    "gtk-3.0"
-    "gtk-4.0"
-    "hypr"
-    "neofetch"
-    "nvim"
-    "nwg-look"
-    "rofi"
-    "tmux"
-    "waybar"
+    "alacritty" "gtk-2.0" "gtk-3.0" "gtk-4.0" "hypr"
+    "neofetch" "nvim" "nwg-look" "rofi" "tmux" "waybar"
 )
-
-# Individual files in $HOME to copy
-# These will be copied to $DOTFILES_REPO_DIR/
 HOME_FILES_TO_COPY=(
     ".zshrc"
 )
@@ -32,43 +16,57 @@ HOME_FILES_TO_COPY=(
 # --- Script Logic ---
 
 echo "Starting dotfiles update process..."
-
-# Navigate to the dotfiles repository
 echo "Changing directory to $DOTFILES_REPO_DIR"
 cd "$DOTFILES_REPO_DIR" || {
     echo "Error: Could not navigate to $DOTFILES_REPO_DIR. Aborting."
     exit 1
 }
 
-# Ensure the .config directory exists in the repo
+# --- Update Submodules ---
+echo ""
+echo "Updating Git submodules (like .oh-my-zsh)..."
+# This will fetch the latest from their configured remotes and check out the default branch
+# Or, more precisely, it updates them to the commit specified in the superproject if they are "out of sync"
+# or pulls the latest from their remote if you use `git submodule update --remote`
+# For simply pulling the latest from the submodule's own default branch:
+if [ -d ".oh-my-zsh" ] && [ -d ".oh-my-zsh/.git" ]; then # Check if it's a directory and a git repo (submodule)
+    echo "Updating .oh-my-zsh submodule..."
+    ( # Run in a subshell to not change the main script's directory
+        cd .oh-my-zsh
+        git pull origin master # Or main, or whatever branch OMZ uses
+        # If you want it to update to the specific commit registered in the superproject (less common for this script's purpose)
+        # you'd use `git submodule update --init --recursive .oh-my-zsh` from the parent dir.
+        # But usually for "updating dotfiles" you want the latest from the submodule's source.
+    )
+    echo ".oh-my-zsh submodule updated."
+else
+    echo "Warning: .oh-my-zsh is not a recognized submodule or does not exist. Skipping submodule update."
+fi
+# You might want to do this for all submodules if you have more:
+# git submodule update --init --remote --recursive # Fetches latest from remote for all submodules
+
 TARGET_CONFIG_DIR="$DOTFILES_REPO_DIR/.config"
 echo "Ensuring $TARGET_CONFIG_DIR exists..."
 mkdir -p "$TARGET_CONFIG_DIR"
 
-# Copy .config subdirectories
 echo ""
 echo "Copying .config directories..."
 for dir_name in "${CONFIG_DIRS_TO_COPY[@]}"; do
     SOURCE_PATH="$HOME/.config/$dir_name"
     DEST_PATH="$TARGET_CONFIG_DIR/$dir_name"
-
     if [ -d "$SOURCE_PATH" ]; then
         echo "Syncing $SOURCE_PATH/ to $DEST_PATH/"
-        # rsync -avh --delete source/ destination/
-        # --delete will remove files in destination that are not in source
         rsync -avh --delete "$SOURCE_PATH/" "$DEST_PATH/"
     else
         echo "Warning: Source directory $SOURCE_PATH not found. Skipping."
     fi
 done
 
-# Copy individual files from $HOME
 echo ""
 echo "Copying files from HOME directory..."
 for file_name in "${HOME_FILES_TO_COPY[@]}"; do
     SOURCE_PATH="$HOME/$file_name"
     DEST_PATH="$DOTFILES_REPO_DIR/$file_name"
-
     if [ -f "$SOURCE_PATH" ]; then
         echo "Syncing $SOURCE_PATH to $DEST_PATH"
         rsync -avh "$SOURCE_PATH" "$DEST_PATH"
@@ -77,34 +75,17 @@ for file_name in "${HOME_FILES_TO_COPY[@]}"; do
     fi
 done
 
-# Note on .oh-my-zsh:
-# The tree output shows .oh-my-zsh already exists in your dotfiles repo.
-# If it's a git submodule, you should update it separately if needed:
-#   git submodule update --remote .oh-my-zsh
-# This script will simply commit its current state within your dotfiles repo.
-# If you run 'omz update' (which updates ~/.oh-my-zsh), and .oh-my-zsh in your
-# dotfiles repo is a submodule, 'git status' in DOTFILES_REPO_DIR will show
-# '.oh-my-zsh' as modified (new commits). 'git add .oh-my-zsh' will stage this.
-# If it's just a copy, then you'd need to rsync $HOME/.oh-my-zsh/ to $DOTFILES_REPO_DIR/.oh-my-zsh/
-# For simplicity, and given the .git inside, this script assumes it's managed
-# (either as submodule or you manually keep it in sync and just want to commit changes).
-
 echo ""
 echo "Git operations..."
-# Add all changes to staging
 echo "Staging changes (git add .)"
 git add .
 
-# Check if there are any changes to commit
 if git diff --staged --quiet; then
     echo "No changes to commit. Dotfiles are up-to-date."
 else
-    # Commit changes
     COMMIT_MESSAGE="Automated dotfiles update: $(date +'%Y-%m-%d %H:%M:%S')"
     echo "Committing changes with message: \"$COMMIT_MESSAGE\""
     git commit -m "$COMMIT_MESSAGE"
-
-    # Ask to push
     echo ""
     read -p "Do you want to push changes to the remote repository? (y/N): " PUSH_CHOICE
     if [[ "$PUSH_CHOICE" =~ ^[Yy]$ ]]; then
