@@ -12,6 +12,10 @@ CONFIG_DIRS_TO_COPY=(
 HOME_FILES_TO_COPY=(
     ".zshrc"
 )
+# Add .oh-my-zsh to a new list or handle it specially
+# For simplicity, let's assume you want to sync the whole thing
+OH_MY_ZSH_SOURCE="$HOME/.oh-my-zsh"
+OH_MY_ZSH_DEST="$DOTFILES_REPO_DIR/.oh-my-zsh"
 
 # --- Script Logic ---
 
@@ -22,28 +26,7 @@ cd "$DOTFILES_REPO_DIR" || {
     exit 1
 }
 
-# --- Update Submodules ---
-echo ""
-echo "Updating Git submodules (like .oh-my-zsh)..."
-# This will fetch the latest from their configured remotes and check out the default branch
-# Or, more precisely, it updates them to the commit specified in the superproject if they are "out of sync"
-# or pulls the latest from their remote if you use `git submodule update --remote`
-# For simply pulling the latest from the submodule's own default branch:
-if [ -d ".oh-my-zsh" ] && [ -d ".oh-my-zsh/.git" ]; then # Check if it's a directory and a git repo (submodule)
-    echo "Updating .oh-my-zsh submodule..."
-    ( # Run in a subshell to not change the main script's directory
-        cd .oh-my-zsh
-        git pull origin master # Or main, or whatever branch OMZ uses
-        # If you want it to update to the specific commit registered in the superproject (less common for this script's purpose)
-        # you'd use `git submodule update --init --recursive .oh-my-zsh` from the parent dir.
-        # But usually for "updating dotfiles" you want the latest from the submodule's source.
-    )
-    echo ".oh-my-zsh submodule updated."
-else
-    echo "Warning: .oh-my-zsh is not a recognized submodule or does not exist. Skipping submodule update."
-fi
-# You might want to do this for all submodules if you have more:
-# git submodule update --init --remote --recursive # Fetches latest from remote for all submodules
+# Remove the old submodule update logic if it was there
 
 TARGET_CONFIG_DIR="$DOTFILES_REPO_DIR/.config"
 echo "Ensuring $TARGET_CONFIG_DIR exists..."
@@ -74,6 +57,22 @@ for file_name in "${HOME_FILES_TO_COPY[@]}"; do
         echo "Warning: Source file $SOURCE_PATH not found. Skipping."
     fi
 done
+
+# Sync .oh-my-zsh directory
+echo ""
+echo "Syncing .oh-my-zsh directory..."
+if [ -d "$OH_MY_ZSH_SOURCE" ]; then
+    echo "Syncing $OH_MY_ZSH_SOURCE/ to $OH_MY_ZSH_DEST/"
+    mkdir -p "$OH_MY_ZSH_DEST" # Ensure destination exists
+    # Be careful with --delete here. If OMZ generates cache or logs you don't want in the repo,
+    # you might want a .gitignore inside $OH_MY_ZSH_DEST or exclude them in rsync.
+    # For a full mirror:
+    rsync -avh --delete --exclude '.git/' --exclude 'cache/' --exclude 'log/' "$OH_MY_ZSH_SOURCE/" "$OH_MY_ZSH_DEST/"
+    # The --exclude '.git/' is important if your source ~/.oh-my-zsh is a git repo itself.
+    # You might want to refine --exclude further based on what's in your ~/.oh-my-zsh (e.g., 'custom/plugins/some_plugin_with_its_own_git/')
+else
+    echo "Warning: Source directory $OH_MY_ZSH_SOURCE not found. Skipping .oh-my-zsh sync."
+fi
 
 echo ""
 echo "Git operations..."
