@@ -5,7 +5,7 @@ set -e
 
 # --- Configuration ---
 # Path to your dotfiles repository
-DOTFILES_REPO_DIR="$HOME/Dow/dotfiles"
+DOTFILES_REPO_DIR="$HOME/Downloads/dotfiles"
 
 # Source directories in $HOME/.config to copy
 # These will be copied to $DOTFILES_REPO_DIR/.config/
